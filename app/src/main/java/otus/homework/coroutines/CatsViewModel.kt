@@ -32,7 +32,11 @@ class CatsViewModel(
         }
     }
 
-    override fun updateData() {
+    init {
+        updateData()
+    }
+
+    fun updateData() {
         loadFactsJob?.cancel()
         loadFactsJob = viewModelScope.launch(scopeExceptionHandler) {
             val fact = async { factsService.getCatFact() }

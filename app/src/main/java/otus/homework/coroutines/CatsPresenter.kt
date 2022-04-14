@@ -1,24 +1,44 @@
 package otus.homework.coroutines
 
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
+
 class CatsPresenter(
     private val catsView: CatsView,
-    private val model: CatsViewModel) {
+    private val factsService: CatsService,
+    private val picsService: CatsService,
+) {
 
-    fun onBtnClick() {
-        model.updateData()
-    }
+    private val scope = PresenterScope()
 
-    fun onStateChanged(result: Result<CatPresModel>) {
-        when (result) {
-            is Result.Success -> catsView.populate(result.value)
-            is Result.Error -> onError(result)
+    private val scopeExceptionHandler = CoroutineExceptionHandler { _, ex ->
+        when (ex) {
+            is SocketTimeoutException -> {
+                catsView.showToast("Не удалось получить ответ от сервера")
+            }
+            else -> {
+                catsView.showToast("${ex.message}")
+                CrashMonitor.trackWarning()
+            }
         }
     }
 
-    private fun onError(result: Result.Error) {
-        when {
-            result.msg != null -> catsView.showToast(result.msg)
-            result.resId != null -> catsView.showToast(result.resId)
+    fun onInitComplete() {
+        scope.launch(scopeExceptionHandler) {
+            try {
+                val fact = async { factsService.getCatFact() }
+                val image = async { picsService.getCatImage() }
+                val state = CatPresModel(
+                    fact.await().text,
+                    image.await().file
+                )
+                catsView.populate(state)
+            } catch (ex: SocketTimeoutException) {
+                catsView.showToast("${ex.message}")
+                CrashMonitor.trackWarning()
+            }
         }
     }
 

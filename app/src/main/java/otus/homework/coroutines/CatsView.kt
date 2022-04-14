@@ -18,12 +18,15 @@ class CatsView @JvmOverloads constructor(
         CatsViewBinding.inflate(LayoutInflater.from(context), this, true)
     }
 
+    var model: CatsViewModel? = null
     var presenter: CatsPresenter? = null
 
     override fun onFinishInflate() {
         super.onFinishInflate()
         binding.button.setOnClickListener {
-            presenter?.onBtnClick()
+            model?.updateData()
+
+            presenter?.onInitComplete()
         }
     }
 
